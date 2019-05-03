@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gohugoio/hugo/mods"
+
 	"github.com/gohugoio/hugo/parser/metadecoders"
 
 	"github.com/gohugoio/hugo/common/herrors"
@@ -447,32 +449,40 @@ func (l configLoader) loadThemeConfig(v1 *viper.Viper) ([]string, error) {
 	themesDir := paths.AbsPathify(l.WorkingDir, v1.GetString("themesDir"))
 	themes := config.GetStringSlicePreserveString(v1, "theme")
 
-	themeConfigs, err := paths.CollectThemes(l.Fs, themesDir, themes)
+	// TODO(bep) mod check that we do this once only
+	modsClient := mods.NewClient(l.Fs, l.WorkingDir, themesDir, themes)
+	themeConfig, err := modsClient.Collect()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(themeConfigs) == 0 {
+	if len(themeConfig.Modules) == 0 {
 		return nil, nil
 	}
 
-	v1.Set("allThemes", themeConfigs)
+	v1.Set("allThemes", themeConfig.Modules)
 
 	var configFilenames []string
-	for _, tc := range themeConfigs {
-		if tc.ConfigFilename != "" {
-			configFilenames = append(configFilenames, tc.ConfigFilename)
+	for _, tc := range themeConfig.Modules {
+		if tc.ConfigFilename() != "" {
+			configFilenames = append(configFilenames, tc.ConfigFilename())
 			if err := l.applyThemeConfig(v1, tc); err != nil {
 				return nil, err
 			}
 		}
 	}
 
+	if themeConfig.GoModulesFilename != "" {
+		// We want to watch this for changes and trigger rebuild on version
+		// changes etc.
+		configFilenames = append(configFilenames, themeConfig.GoModulesFilename)
+	}
+
 	return configFilenames, nil
 
 }
 
-func (l configLoader) applyThemeConfig(v1 *viper.Viper, theme paths.ThemeConfig) error {
+func (l configLoader) applyThemeConfig(v1 *viper.Viper, theme mods.Module) error {
 
 	const (
 		paramsKey    = "params"
@@ -480,13 +490,13 @@ func (l configLoader) applyThemeConfig(v1 *viper.Viper, theme paths.ThemeConfig)
 		menuKey      = "menus"
 	)
 
-	v2 := theme.Cfg
+	v2 := theme.Cfg()
 
 	for _, key := range []string{paramsKey, "outputformats", "mediatypes"} {
 		l.mergeStringMapKeepLeft("", key, v1, v2)
 	}
 
-	themeLower := strings.ToLower(theme.Name)
+	themeLower := strings.ToLower(theme.Path())
 	themeParamsNamespace := paramsKey + "." + themeLower
 
 	// Set namespaced params
