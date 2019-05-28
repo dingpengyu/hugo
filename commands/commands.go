@@ -54,7 +54,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		newImportCmd(),
 		newGenCmd(),
 		createReleaser(),
-		newModCmd(),
+		b.newModCmd(),
 	)
 
 	return b
@@ -190,9 +190,10 @@ Complete documentation is available at http://gohugo.io/.`,
 }
 
 type hugoBuilderCommon struct {
-	source      string
-	baseURL     string
-	environment string
+	source       string
+	baseURL      string
+	environment  string
+	ignoreVendor bool
 
 	buildWatch bool
 
@@ -244,12 +245,12 @@ func (cc *hugoBuilderCommon) getEnvironment(isServer bool) string {
 	return hugo.EnvironmentProduction
 }
 
-// TODO(bep) mod
 func (cc *hugoBuilderCommon) handleCommonBuilderFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&cc.source, "source", "s", "", "filesystem path to read files relative from")
-	cmd.Flags().StringVarP(&cc.environment, "environment", "e", "", "build environment")
-	cmd.Flags().StringP("themesDir", "", "", "filesystem path to themes directory")
-
+	cmd.PersistentFlags().StringVarP(&cc.source, "source", "s", "", "filesystem path to read files relative from")
+	cmd.PersistentFlags().SetAnnotation("source", cobra.BashCompSubdirsInDir, []string{})
+	cmd.PersistentFlags().StringVarP(&cc.environment, "environment", "e", "", "build environment")
+	cmd.PersistentFlags().StringP("themesDir", "", "", "filesystem path to themes directory")
+	cmd.PersistentFlags().BoolP("ignoreVendor", "", false, "ignores any _vendor directory")
 }
 
 func (cc *hugoBuilderCommon) handleFlags(cmd *cobra.Command) {

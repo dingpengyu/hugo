@@ -27,20 +27,19 @@ import (
 var _ cmder = (*modCmd)(nil)
 
 type modCmd struct {
-	hugoBuilderCommon
-	*baseCmd
+	*baseBuilderCmd
 }
 
-func newModCmd() *modCmd {
+func (b *commandsBuilder) newModCmd() *modCmd {
 	c := &modCmd{}
 
-	c.baseCmd = newBaseCmd(&cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "mod",
 		Short: "Various Hugo Modules helpers.",
 		RunE:  nil,
-	})
+	}
 
-	c.cmd.AddCommand(
+	cmd.AddCommand(
 		&cobra.Command{
 			// go get [-d] [-m] [-u] [-v] [-insecure] [build flags] [packages]
 			Use:   "get",
@@ -98,7 +97,7 @@ func newModCmd() *modCmd {
 		},
 	)
 
-	c.handleCommonBuilderFlags(c.cmd)
+	c.baseBuilderCmd = b.newBuilderCmd(cmd)
 
 	return c
 
@@ -126,6 +125,7 @@ func (c *modCmd) newModsClient(cfg config.Provider) *mods.Client {
 		workingDir string
 		themesDir  string
 		themes     []string
+		ignoreVendor   bool
 	)
 
 	if c.source != "" {
@@ -138,7 +138,8 @@ func (c *modCmd) newModsClient(cfg config.Provider) *mods.Client {
 		// TODO(bep) mod remember this if we change
 		themesDir = cfg.GetString("themesDir")
 		themes = cfg.GetStringSlice("theme")
+		ignoreVendor = cfg.GetBool("ignoreVendor")
 	}
 
-	return mods.NewClient(hugofs.Os, workingDir, themesDir, themes)
+	return mods.NewClient(hugofs.Os, ignoreVendor, workingDir, themesDir, themes)
 }

@@ -66,7 +66,11 @@ const (
 	goSumFilename = "go.sum"
 )
 
-func NewClient(fs afero.Fs, workingDir, themesDir string, imports []string) *Client {
+func NewClient(
+	fs afero.Fs,
+	ignoreVendor bool,
+	workingDir, themesDir string,
+	imports []string) *Client {
 
 	n := filepath.Join(workingDir, goModFilename)
 	goModEnabled, _ := afero.Exists(fs, n)
@@ -80,6 +84,7 @@ func NewClient(fs afero.Fs, workingDir, themesDir string, imports []string) *Cli
 
 	return &Client{
 		fs:                fs,
+		ignoreVendor:      ignoreVendor,
 		workingDir:        workingDir,
 		themesDir:         themesDir,
 		imports:           imports,
@@ -90,6 +95,9 @@ func NewClient(fs afero.Fs, workingDir, themesDir string, imports []string) *Cli
 // Client contains most of the API provided by this package.
 type Client struct {
 	fs afero.Fs
+
+	// Ignore any _vendor directory.
+	ignoreVendor bool // TODO(bep) mod consider this vs Tidy etc.
 
 	// Absolute path to the project dir.
 	workingDir string

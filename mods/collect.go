@@ -116,21 +116,29 @@ func (c *collector) getVendoredDir(path string) (vendoredModule, bool) {
 const zeroVersion = ""
 
 func (c *collector) add(owner Module, modulePath string) (Module, error) {
-	var mod *goModule
-
-	if err := c.collectModulesTXT(owner); err != nil {
-		return nil, err
-	}
-
-	var moduleDir string
+	var (
+		mod       *goModule
+		moduleDir string
+		version   string
+		vendored  bool
+	)
 
 	realOwner := owner
 
-	// Try _vendor first.
-	vendoredModule, vendored := c.getVendoredDir(modulePath)
-	if vendored {
-		moduleDir = vendoredModule.Dir
-		realOwner = vendoredModule.Owner
+	if !c.Client.ignoreVendor {
+		if err := c.collectModulesTXT(owner); err != nil {
+			return nil, err
+		}
+
+		// Try _vendor first.
+		var vm vendoredModule
+		vm, vendored = c.getVendoredDir(modulePath)
+		if vendored {
+			moduleDir = vm.Dir
+			realOwner = vm.Owner
+			version = vm.Version
+
+		}
 	}
 
 	if moduleDir == "" {
@@ -171,11 +179,6 @@ func (c *collector) add(owner Module, modulePath string) (Module, error) {
 
 	if !strings.HasSuffix(moduleDir, fileSeparator) {
 		moduleDir += fileSeparator
-	}
-
-	var version string
-	if vendored {
-		version = vendoredModule.Version
 	}
 
 	ma := &moduleAdapter{

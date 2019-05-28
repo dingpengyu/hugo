@@ -30,44 +30,46 @@ func TestHugoModules(t *testing.T) {
 	// We both produce and consume these for all of these,
 	// a test matrix Keanu Reeves would appreciate.
 	for _, goos := range []string{"linux", "darwin", "windows"} {
-		testmods := mods.CreateModules(goos).Collect()
-		for _, m := range testmods {
-			m := m
-			t.Run(strings.Replace(m.Path(), ".", "/", -1), func(t *testing.T) {
-				t.Parallel()
+		for _, ignoreVendor := range []bool{false, true} {
+			testmods := mods.CreateModules(goos).Collect()
+			ignoreVendor := ignoreVendor
+			for _, m := range testmods {
+				m := m
+				name := fmt.Sprintf("%s/ignoreVendor=%t", strings.Replace(m.Path(), ".", "/", -1), ignoreVendor)
+				t.Run(name, func(t *testing.T) {
+					t.Parallel()
 
-				assert := require.New(t)
+					assert := require.New(t)
 
-				v := viper.New()
+					v := viper.New()
 
-				workingDir, clean, err := createTempDir("hugo-modules-test")
-				assert.NoError(err)
-				defer clean()
+					workingDir, clean, err := createTempDir("hugo-modules-test")
+					assert.NoError(err)
+					defer clean()
 
-				v.Set("workingDir", workingDir)
-
-				configTemplate := `
+					configTemplate := `
 baseURL = "https://example.com"
 title = "My Modular Site"
 workingDir = %q
 theme = %q
+ignoreVendor = %t
 
 `
 
-				config := fmt.Sprintf(configTemplate, workingDir, m.Path())
+					config := fmt.Sprintf(configTemplate, workingDir, m.Path(), ignoreVendor)
 
-				b := newTestSitesBuilder(t)
+					b := newTestSitesBuilder(t)
 
-				// Need to use OS fs for this.
-				b.Fs = hugofs.NewDefault(v)
+					// Need to use OS fs for this.
+					b.Fs = hugofs.NewDefault(v)
 
-				b.WithWorkingDir(workingDir).WithConfigFile("toml", config)
-				b.WithContent("page.md", `
+					b.WithWorkingDir(workingDir).WithConfigFile("toml", config)
+					b.WithContent("page.md", `
 ---
 title: "Foo"
 ---
 `)
-				b.WithTemplates("home.html", `
+					b.WithTemplates("home.html", `
 
 {{ $mod := .Site.Data.modinfo.module }}
 Mod Name: {{ $mod.name }}
@@ -79,34 +81,36 @@ Mod Version: {{ $mod.version }}
 
 
 `)
-				b.WithSourceFile("go.mod", `
+					b.WithSourceFile("go.mod", `
 module github.com/gohugoio/tests/testHugoModules
 
 
 `)
 
-				b.Build(BuildCfg{})
+					b.Build(BuildCfg{})
 
-				// Verify that go.mod is autopopulated with all the modules in config.toml.
-				b.AssertFileContent("go.mod", m.Path())
+					// Verify that go.mod is autopopulated with all the modules in config.toml.
+					b.AssertFileContent("go.mod", m.Path())
 
-				b.AssertFileContent("public/index.html",
-					"Mod Name: "+m.Name(),
-					"Mod Version: v1.4.0")
+					b.AssertFileContent("public/index.html",
+						"Mod Name: "+m.Name(),
+						"Mod Version: v1.4.0")
 
-				b.AssertFileContent("public/index.html", createModMatchers(m, m.Vendor)...)
+					b.AssertFileContent("public/index.html", createChildModMatchers(m, ignoreVendor, m.Vendor)...)
 
-			})
+				})
+
+			}
 		}
 	}
 
 }
 
-func createModMatchers(m *mods.Md, vendored bool) []string {
+func createChildModMatchers(m *mods.Md, ignoreVendor, vendored bool) []string {
 	// Child depdendencies are one behind.
 	expectMinorVersion := 3
 
-	if vendored {
+	if !ignoreVendor && vendored {
 		// Vendored modules are stuck at v1.1.0.
 		expectMinorVersion = 1
 	}
@@ -114,13 +118,12 @@ func createModMatchers(m *mods.Md, vendored bool) []string {
 	expectVersion := fmt.Sprintf("v1.%d.0", expectMinorVersion)
 
 	var matchers []string
+
 	for _, mm := range m.Children {
 		matchers = append(
 			matchers,
 			fmt.Sprintf("%s: name: %s|version: %s", mm.Name(), mm.Name(), expectVersion))
-
-		matchers = append(matchers, createModMatchers(mm, vendored || mm.Vendor)...)
+		matchers = append(matchers, createChildModMatchers(mm, ignoreVendor, vendored || mm.Vendor)...)
 	}
-
 	return matchers
 }

@@ -448,9 +448,10 @@ func loadLanguageSettings(cfg config.Provider, oldLangs langs.Languages) error {
 func (l configLoader) loadThemeConfig(v1 *viper.Viper) ([]string, error) {
 	themesDir := paths.AbsPathify(l.WorkingDir, v1.GetString("themesDir"))
 	themes := config.GetStringSlicePreserveString(v1, "theme")
+	ignoreVendor := v1.GetBool("ignoreVendor")
 
 	// TODO(bep) mod check that we do this once only
-	modsClient := mods.NewClient(l.Fs, l.WorkingDir, themesDir, themes)
+	modsClient := mods.NewClient(l.Fs, ignoreVendor, l.WorkingDir, themesDir, themes)
 	themeConfig, err := modsClient.Collect()
 	if err != nil {
 		return nil, err
