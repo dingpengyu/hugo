@@ -46,7 +46,11 @@ func (b *commandsBuilder) newModCmd() *modCmd {
 			Short: "TODO(bep)",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if len(args) >= 1 {
-					return c.newModsClient(nil).Get(args[0])
+					c, err := c.newModsClient(nil)
+					if err != nil {
+						return err
+					}
+					return c.Get(args[0])
 				}
 
 				// Collect any modules defined in config.toml
@@ -108,7 +112,10 @@ func (c *modCmd) withModsClient(f func(*mods.Client) error) error {
 	if err != nil {
 		return err
 	}
-	client := c.newModsClient(com.Cfg)
+	client, err := c.newModsClient(com.Cfg)
+	if err != nil {
+		return err
+	}
 	return f(client)
 }
 
@@ -120,18 +127,22 @@ func (c *modCmd) initConfig() (*commandeer, error) {
 	return com, nil
 }
 
-func (c *modCmd) newModsClient(cfg config.Provider) *mods.Client {
+func (c *modCmd) newModsClient(cfg config.Provider) (*mods.Client, error) {
 	var (
-		workingDir string
-		themesDir  string
-		themes     []string
-		ignoreVendor   bool
+		workingDir   string
+		themesDir    string
+		themes       []string
+		ignoreVendor bool
 	)
 
 	if c.source != "" {
 		workingDir = c.source
 	} else {
-		workingDir, _ = os.Getwd()
+		var err error
+		workingDir, err = os.Getwd()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if cfg != nil {
@@ -141,5 +152,5 @@ func (c *modCmd) newModsClient(cfg config.Provider) *mods.Client {
 		ignoreVendor = cfg.GetBool("ignoreVendor")
 	}
 
-	return mods.NewClient(hugofs.Os, ignoreVendor, workingDir, themesDir, themes)
+	return mods.NewClient(hugofs.Os, ignoreVendor, workingDir, themesDir, themes), nil
 }
