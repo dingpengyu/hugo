@@ -20,17 +20,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gohugoio/hugo/mods"
-
 	"github.com/gohugoio/hugo/parser/metadecoders"
 
 	"github.com/gohugoio/hugo/common/herrors"
 	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/hugolib/paths"
+	"github.com/gohugoio/hugo/langs"
+	"github.com/gohugoio/hugo/modules"
 	"github.com/pkg/errors"
 	_errors "github.com/pkg/errors"
-
-	"github.com/gohugoio/hugo/langs"
 
 	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/config/privacy"
@@ -451,7 +449,7 @@ func (l configLoader) loadThemeConfig(v1 *viper.Viper) ([]string, error) {
 	ignoreVendor := v1.GetBool("ignoreVendor")
 
 	// TODO(bep) mod check that we do this once only
-	modsClient := mods.NewClient(l.Fs, ignoreVendor, l.WorkingDir, themesDir, themes)
+	modsClient := modules.NewClient(l.Fs, ignoreVendor, l.WorkingDir, themesDir, themes)
 	themeConfig, err := modsClient.Collect()
 	if err != nil {
 		return nil, err
@@ -483,7 +481,7 @@ func (l configLoader) loadThemeConfig(v1 *viper.Viper) ([]string, error) {
 
 }
 
-func (l configLoader) applyThemeConfig(v1 *viper.Viper, theme mods.Module) error {
+func (l configLoader) applyThemeConfig(v1 *viper.Viper, theme modules.Module) error {
 
 	const (
 		paramsKey    = "params"

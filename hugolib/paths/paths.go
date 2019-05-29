@@ -20,7 +20,7 @@ import (
 
 	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/langs"
-	"github.com/gohugoio/hugo/mods"
+	"github.com/gohugoio/hugo/modules"
 	"github.com/pkg/errors"
 
 	"github.com/gohugoio/hugo/hugofs"
@@ -76,7 +76,7 @@ type Paths struct {
 	multilingual                   bool
 
 	themes    []string
-	AllThemes mods.Modules
+	AllThemes modules.Modules
 }
 
 func New(fs *hugofs.Fs, cfg config.Provider) (*Paths, error) {
@@ -178,9 +178,9 @@ func New(fs *hugofs.Fs, cfg config.Provider) (*Paths, error) {
 	}
 
 	if cfg.IsSet("allThemes") {
-		p.AllThemes = cfg.Get("allThemes").(mods.Modules)
+		p.AllThemes = cfg.Get("allThemes").(modules.Modules)
 	} else {
-		modsc := mods.NewClient(
+		modsc := modules.NewClient(
 			p.Fs.Source,
 			cfg.GetBool("ignoreVendor"),
 			p.WorkingDir,

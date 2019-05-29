@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mods
+package modules
 
 import (
 	"bufio"
@@ -68,6 +68,10 @@ const (
 	goSumFilename = "go.sum"
 )
 
+// NewClient creates a new Client that can be used to manage the Hugo Components
+// in a given workingDir.
+// The Client will resolve the dependencies recursively, but needs the top
+// level imports to start out.
 func NewClient(
 	fs afero.Fs,
 	ignoreVendor bool,
@@ -143,6 +147,7 @@ func (m *Client) Graph(w io.Writer) error {
 	return nil
 }
 
+// Tidy can be used to remove unused dependencies from go.mod and go.sum.
 func (m *Client) Tidy() error {
 	tc, err := m.Collect()
 	if err != nil {

@@ -20,7 +20,7 @@ import (
 
 	"github.com/gohugoio/hugo/hugofs"
 
-	"github.com/gohugoio/hugo/mods"
+	"github.com/gohugoio/hugo/modules"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +63,7 @@ func (b *commandsBuilder) newModCmd() *modCmd {
 			Use:   "graph",
 			Short: "TODO(bep)",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.withModsClient(func(c *mods.Client) error {
+				return c.withModsClient(func(c *modules.Client) error {
 					return c.Graph(os.Stdout)
 				})
 			},
@@ -76,7 +76,7 @@ func (b *commandsBuilder) newModCmd() *modCmd {
 				if len(args) >= 1 {
 					path = args[0]
 				}
-				return c.withModsClient(func(c *mods.Client) error {
+				return c.withModsClient(func(c *modules.Client) error {
 					return c.Init(path)
 				})
 			},
@@ -85,7 +85,7 @@ func (b *commandsBuilder) newModCmd() *modCmd {
 			Use:   "vendor",
 			Short: "TODO(bep)",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.withModsClient(func(c *mods.Client) error {
+				return c.withModsClient(func(c *modules.Client) error {
 					return c.Vendor()
 				})
 			},
@@ -94,7 +94,7 @@ func (b *commandsBuilder) newModCmd() *modCmd {
 			Use:   "tidy",
 			Short: "TODO(bep)",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.withModsClient(func(c *mods.Client) error {
+				return c.withModsClient(func(c *modules.Client) error {
 					return c.Tidy()
 				})
 			},
@@ -107,7 +107,7 @@ func (b *commandsBuilder) newModCmd() *modCmd {
 
 }
 
-func (c *modCmd) withModsClient(f func(*mods.Client) error) error {
+func (c *modCmd) withModsClient(f func(*modules.Client) error) error {
 	com, err := c.initConfig()
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func (c *modCmd) initConfig() (*commandeer, error) {
 	return com, nil
 }
 
-func (c *modCmd) newModsClient(cfg config.Provider) (*mods.Client, error) {
+func (c *modCmd) newModsClient(cfg config.Provider) (*modules.Client, error) {
 	var (
 		workingDir   string
 		themesDir    string
@@ -151,5 +151,5 @@ func (c *modCmd) newModsClient(cfg config.Provider) (*mods.Client, error) {
 		ignoreVendor = cfg.GetBool("ignoreVendor")
 	}
 
-	return mods.NewClient(hugofs.Os, ignoreVendor, workingDir, themesDir, themes), nil
+	return modules.NewClient(hugofs.Os, ignoreVendor, workingDir, themesDir, themes), nil
 }

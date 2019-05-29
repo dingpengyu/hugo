@@ -11,7 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mods
+// Package modules provides a client that can be used to manage Hugo Components,
+// what's refered to as Hugo Modules. Hugo Modules is built on top of Go Modules,
+// but also supports vendoring and components stored directly in the themes dir.
+package modules
 
 import (
 	"github.com/gohugoio/hugo/config"
