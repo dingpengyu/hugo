@@ -75,8 +75,9 @@ type Paths struct {
 	DefaultContentLanguage         string
 	multilingual                   bool
 
-	themes    []string
-	AllThemes modules.Modules
+	themes        []string
+	AllThemes     modules.Modules
+	ModulesClient *modules.Client
 }
 
 func New(fs *hugofs.Fs, cfg config.Provider) (*Paths, error) {
@@ -164,6 +165,7 @@ func New(fs *hugofs.Fs, cfg config.Provider) (*Paths, error) {
 		AbsResourcesDir: absResourcesDir,
 		AbsPublishDir:   absPublishDir,
 
+		// TODO(bep) mod check usage (vs imports)
 		themes: config.GetStringSlicePreserveString(cfg, "theme"),
 
 		multilingual:                   cfg.GetBool("multilingual"),
@@ -177,24 +179,13 @@ func New(fs *hugofs.Fs, cfg config.Provider) (*Paths, error) {
 		PaginatePath: cfg.GetString("paginatePath"),
 	}
 
+	// TODO(bep) improve
 	if cfg.IsSet("allThemes") {
 		p.AllThemes = cfg.Get("allThemes").(modules.Modules)
-	} else {
-		modsc := modules.NewClient(modules.ClientConfig{
-			Fs:           p.Fs.Source,
-			WorkingDir:   p.WorkingDir,
-			ThemesDir:    p.AbsPathify(p.ThemesDir),
-			Imports:      p.Themes(),
-			IgnoreVendor: cfg.GetBool("ignoreVendor"),
-			ModProxy:     cfg.GetString("modProxy"),
-		})
+	}
 
-		tc, err := modsc.Collect()
-		if err != nil {
-			return nil, err
-		}
-		p.AllThemes = tc.Modules
-
+	if cfg.IsSet("modulesClient") {
+		p.ModulesClient = cfg.Get("modulesClient").(*modules.Client)
 	}
 
 	// TODO(bep) remove this, eventually

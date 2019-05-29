@@ -35,10 +35,32 @@ type Provider interface {
 // we do not attempt to split it into fields.
 func GetStringSlicePreserveString(cfg Provider, key string) []string {
 	sd := cfg.Get(key)
-	if sds, ok := sd.(string); ok {
+	return toStringSlicePreserveString(sd)
+}
+
+func toStringSlicePreserveString(v interface{}) []string {
+	if sds, ok := v.(string); ok {
 		return []string{sds}
 	}
-	return cast.ToStringSlice(sd)
+	return cast.ToStringSlice(v)
+}
+
+// ResolveModuleImports resolves slice of component paths.
+func ResolveModuleImports(cfg Provider) []string {
+	if cfg == nil {
+		return nil
+	}
+
+	const moduleKey = "module"
+
+	// We introduced a module config secion with an import slice
+	// in Hugo 0.56, but we need to fall back to the old theme
+	// config if not found.
+	if !cfg.IsSet(moduleKey) {
+		return GetStringSlicePreserveString(cfg, "theme")
+	}
+
+	return toStringSlicePreserveString(cfg.GetStringMap(moduleKey)["imports"])
 }
 
 // SetBaseTestDefaults provides some common config defaults used in tests.

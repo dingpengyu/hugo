@@ -25,7 +25,6 @@ import (
 
 	"github.com/gohugoio/hugo/config"
 	"github.com/spf13/afero"
-	"github.com/spf13/cast"
 )
 
 const vendorModulesFilename = "modules.txt"
@@ -220,19 +219,11 @@ func (c *collector) addAndRecurse(owner Module, themes ...string) error {
 }
 
 func (c *collector) addThemeNamesFromTheme(module Module) error {
-	if module.Cfg() != nil && module.Cfg().IsSet("theme") {
-		v := module.Cfg().Get("theme")
-		switch vv := v.(type) {
-		case []string:
-			return c.addAndRecurse(module, vv...)
-		case []interface{}:
-			return c.addAndRecurse(module, cast.ToStringSlice(vv)...)
-		default:
-			return c.addAndRecurse(module, cast.ToString(vv))
-		}
+	imports := config.ResolveModuleImports(module.Cfg())
+	if imports == nil {
+		return nil
 	}
-
-	return nil
+	return c.addAndRecurse(module, imports...)
 }
 
 func (c *collector) applyThemeConfig(tc *moduleAdapter) error {
