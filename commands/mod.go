@@ -146,7 +146,6 @@ func (c *modCmd) newModsClient(cfg config.Provider) (*mods.Client, error) {
 	}
 
 	if cfg != nil {
-		// TODO(bep) mod remember this if we change
 		themesDir = cfg.GetString("themesDir")
 		themes = cfg.GetStringSlice("theme")
 		ignoreVendor = cfg.GetBool("ignoreVendor")

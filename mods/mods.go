@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rogpeppe/go-internal/module"
+
 	"github.com/gohugoio/hugo/common/hugio"
 
 	"github.com/pkg/errors"
@@ -97,7 +99,7 @@ type Client struct {
 	fs afero.Fs
 
 	// Ignore any _vendor directory.
-	ignoreVendor bool // TODO(bep) mod consider this vs Tidy etc.
+	ignoreVendor bool
 
 	// Absolute path to the project dir.
 	workingDir string
@@ -205,8 +207,7 @@ func (m *Client) Init(path string) error {
 }
 
 func (m *Client) IsProbablyModule(path string) bool {
-	// Very simple for now.
-	return m.GoModulesFilename != "" && strings.Contains(path, "/")
+	return module.CheckPath(path) == nil
 }
 
 // Like Go, Hugo supports writing the dependencies to a /_vendor folder.

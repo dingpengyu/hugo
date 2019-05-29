@@ -18,7 +18,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gohugoio/hugo/htesting"
 	"github.com/gohugoio/hugo/hugofs"
+
 	"github.com/gohugoio/testmodBuilder/mods"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
@@ -43,7 +45,7 @@ func TestHugoModules(t *testing.T) {
 
 					v := viper.New()
 
-					workingDir, clean, err := createTempDir("hugo-modules-test")
+					workingDir, clean, err := htesting.CreateTempDir(hugofs.Os, "hugo-modules-test")
 					assert.NoError(err)
 					defer clean()
 

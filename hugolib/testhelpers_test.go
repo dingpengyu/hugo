@@ -2,7 +2,6 @@ package hugolib
 
 import (
 	"io"
-	"io/ioutil"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -92,20 +91,6 @@ func newTestSitesBuilder(t testing.TB) *sitesBuilder {
 	}
 
 	return &sitesBuilder{T: t, Assertions: require.New(t), Fs: fs, configFormat: "toml", dumper: litterOptions}
-}
-
-func createTempDir(prefix string) (string, func(), error) {
-	workDir, err := ioutil.TempDir("", prefix)
-	if err != nil {
-		return "", nil, err
-	}
-
-	if runtime.GOOS == "darwin" && !strings.HasPrefix(workDir, "/private") {
-		// To get the entry folder in line with the rest. This its a little bit
-		// mysterious, but so be it.
-		workDir = "/private" + workDir
-	}
-	return workDir, func() { os.RemoveAll(workDir) }, nil
 }
 
 func (s *sitesBuilder) Running() *sitesBuilder {

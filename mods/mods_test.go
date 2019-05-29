@@ -14,31 +14,85 @@
 package mods
 
 import (
-	"fmt"
+	"bytes"
 	"testing"
+
+	"github.com/gohugoio/hugo/htesting"
+
+	"github.com/gohugoio/hugo/hugofs"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestModules(t *testing.T) {
+func TestClient(t *testing.T) {
+	t.Parallel()
+
+	modName := "hugo-modules-basic-test"
+	modPath := "github.com/gohugoio/tests/" + modName
+	imports := []string{"github.com/gohugoio/hugoTestModules1_darwin/modh2_2"}
+
 	assert := require.New(t)
 
-	// TODO(bep) mod
-
-	dir := "/Users/bep/sites/hugomod/my-modular-site"
-
-	m := &Client{
-		workingDir: dir,
-	}
-
-	mods, err := m.listGoMods()
+	workingDir, clean, err := htesting.CreateTempDir(hugofs.Os, modName)
 	assert.NoError(err)
+	defer clean()
 
-	fmt.Println("MODS:", mods)
+	client := NewClient(
+		hugofs.Os,
+		false,
+		workingDir,
+		"",
+		imports)
+
+	// Test Init
+	assert.NoError(client.Init(modPath))
+
+	// Test Collect
+	mc, err := client.Collect()
+	assert.NoError(err)
+	assert.Equal(3, len(mc.Modules))
+
+	// Test Graph
+	var graphb bytes.Buffer
+	assert.NoError(client.Graph(&graphb))
+
+	expect := `github.com/gohugoio/tests/hugo-modules-basic-test github.com/gohugoio/hugoTestModules1_darwin/modh2_2@v1.4.0
+github.com/gohugoio/hugoTestModules1_darwin/modh2_2@v1.4.0 github.com/gohugoio/hugoTestModules1_darwin/modh2_2_1v@v1.3.0
+github.com/gohugoio/hugoTestModules1_darwin/modh2_2@v1.4.0 github.com/gohugoio/hugoTestModules1_darwin/modh2_2_2@v1.3.0
+`
+
+	assert.Equal(expect, graphb.String())
+
+	// Test Vendor
+	assert.NoError(client.Vendor())
+	graphb.Reset()
+	assert.NoError(client.Graph(&graphb))
+	expectVendored := `github.com/gohugoio/tests/hugo-modules-basic-test github.com/gohugoio/hugoTestModules1_darwin/modh2_2@v1.4.0+vendor
+github.com/gohugoio/tests/hugo-modules-basic-test github.com/gohugoio/hugoTestModules1_darwin/modh2_2_1v@v1.3.0+vendor
+github.com/gohugoio/tests/hugo-modules-basic-test github.com/gohugoio/hugoTestModules1_darwin/modh2_2_2@v1.3.0+vendor
+`
+	assert.Equal(expectVendored, graphb.String())
+
+	// Test the ignoreVendor setting
+	clientIgnoreVendor := NewClient(
+		hugofs.Os,
+		true,
+		workingDir,
+		"",
+		imports)
+
+	graphb.Reset()
+	assert.NoError(clientIgnoreVendor.Graph(&graphb))
+	assert.Equal(expect, graphb.String())
+
+	// Test Tidy
+	// TODO(bep) improve
+	assert.NoError(client.Tidy())
 
 }
 
 func TestSetEnvVars(t *testing.T) {
+	t.Parallel()
 	assert := require.New(t)
 	vars := []string{"FOO=bar", "HUGO=cool", "BAR=foo"}
 	setEnvVars(&vars, "HUGO", "rocking!", "NEW", "bar")

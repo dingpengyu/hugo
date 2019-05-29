@@ -33,7 +33,6 @@ func TestPathKey(t *testing.T) {
 		{"MyTheme", "mytheme"},
 	} {
 		assert.Equal(test.expect, pathKey(test.in))
-
 	}
 
 }

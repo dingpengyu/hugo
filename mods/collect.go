@@ -125,7 +125,7 @@ func (c *collector) add(owner Module, modulePath string) (Module, error) {
 
 	realOwner := owner
 
-	if !c.Client.ignoreVendor {
+	if !c.ignoreVendor {
 		if err := c.collectModulesTXT(owner); err != nil {
 			return nil, err
 		}
@@ -148,6 +148,7 @@ func (c *collector) add(owner Module, modulePath string) (Module, error) {
 		}
 
 		if moduleDir == "" {
+
 			if c.GoModulesFilename != "" && c.IsProbablyModule(modulePath) {
 				// Try to "go get" it and reload the module configuration.
 				if err := c.Get(modulePath); err != nil {
