@@ -447,9 +447,18 @@ func (l configLoader) loadThemeConfig(v1 *viper.Viper) ([]string, error) {
 	themesDir := paths.AbsPathify(l.WorkingDir, v1.GetString("themesDir"))
 	themes := config.GetStringSlicePreserveString(v1, "theme")
 	ignoreVendor := v1.GetBool("ignoreVendor")
+	modProxy := v1.GetString("modProxy")
 
 	// TODO(bep) mod check that we do this once only
-	modsClient := modules.NewClient(l.Fs, ignoreVendor, l.WorkingDir, themesDir, themes)
+	modsClient := modules.NewClient(modules.ClientConfig{
+		Fs:           l.Fs,
+		WorkingDir:   l.WorkingDir,
+		ThemesDir:    themesDir,
+		Imports:      themes,
+		IgnoreVendor: ignoreVendor,
+		ModProxy:     modProxy,
+	})
+
 	themeConfig, err := modsClient.Collect()
 	if err != nil {
 		return nil, err
@@ -644,5 +653,8 @@ func loadDefaultSettingsFor(v *viper.Viper) error {
 	v.SetDefault("disableFastRender", false)
 	v.SetDefault("timeout", 10000) // 10 seconds
 	v.SetDefault("enableInlineShortcodes", false)
+
+	// Translates to GOPROXY when doing "go get" etc.
+	v.SetDefault("modProxy", "direct")
 	return nil
 }

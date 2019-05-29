@@ -180,12 +180,15 @@ func New(fs *hugofs.Fs, cfg config.Provider) (*Paths, error) {
 	if cfg.IsSet("allThemes") {
 		p.AllThemes = cfg.Get("allThemes").(modules.Modules)
 	} else {
-		modsc := modules.NewClient(
-			p.Fs.Source,
-			cfg.GetBool("ignoreVendor"),
-			p.WorkingDir,
-			p.AbsPathify(p.ThemesDir),
-			p.Themes())
+		modsc := modules.NewClient(modules.ClientConfig{
+			Fs:           p.Fs.Source,
+			WorkingDir:   p.WorkingDir,
+			ThemesDir:    p.AbsPathify(p.ThemesDir),
+			Imports:      p.Themes(),
+			IgnoreVendor: cfg.GetBool("ignoreVendor"),
+			ModProxy:     cfg.GetString("modProxy"),
+		})
+
 		tc, err := modsc.Collect()
 		if err != nil {
 			return nil, err

@@ -37,12 +37,11 @@ func TestClient(t *testing.T) {
 	assert.NoError(err)
 	defer clean()
 
-	client := NewClient(
-		hugofs.Os,
-		false,
-		workingDir,
-		"",
-		imports)
+	client := NewClient(ClientConfig{
+		Fs:         hugofs.Os,
+		WorkingDir: workingDir,
+		Imports:    imports,
+	})
 
 	// Test Init
 	assert.NoError(client.Init(modPath))
@@ -74,12 +73,12 @@ github.com/gohugoio/tests/hugo-modules-basic-test github.com/gohugoio/hugoTestMo
 	assert.Equal(expectVendored, graphb.String())
 
 	// Test the ignoreVendor setting
-	clientIgnoreVendor := NewClient(
-		hugofs.Os,
-		true,
-		workingDir,
-		"",
-		imports)
+	clientIgnoreVendor := NewClient(ClientConfig{
+		Fs:           hugofs.Os,
+		WorkingDir:   workingDir,
+		Imports:      imports,
+		IgnoreVendor: true,
+	})
 
 	graphb.Reset()
 	assert.NoError(clientIgnoreVendor.Graph(&graphb))

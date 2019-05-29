@@ -15,6 +15,7 @@ package commands
 
 import (
 	"os"
+	"strings"
 
 	"github.com/gohugoio/hugo/config"
 
@@ -33,30 +34,43 @@ type modCmd struct {
 func (b *commandsBuilder) newModCmd() *modCmd {
 	c := &modCmd{}
 
+	const commonUsage = `
+Note that Hugo will always start out by resolving the components defined in the site
+configuration, provided by a _vendor directory (if no --ignoreVendor flag provided),
+Go Modules, or a folder inside the themes directory, in that order.
+
+`
+
 	cmd := &cobra.Command{
 		Use:   "mod",
 		Short: "Various Hugo Modules helpers.",
-		RunE:  nil,
+		Long:  "LONG V",
+
+		RunE: nil,
 	}
 
 	cmd.AddCommand(
 		&cobra.Command{
 			// go get [-d] [-m] [-u] [-v] [-insecure] [build flags] [packages]
-			Use:   "get",
-			Short: "TODO(bep)",
+			Use:                "get",
+			DisableFlagParsing: true,
+			Short:              "Resolves dependencies in your current Hugo Project.",
+			Long: `
+Resolves dependencies in your current Hugo Project.
+
+You 'go get github.com/gohugoio/testshortcodes@v0.3.0'
+
+Run "go help get" for more information.
+` + commonUsage,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				if len(args) >= 1 {
-					c, err := c.newModsClient(nil)
-					if err != nil {
-						return err
+				return c.withModsClient(func(c *modules.Client) error {
+					// We currently just pass on the flags we get to Go and
+					// need to do the flag handling manually.
+					if len(args) == 1 && strings.Contains(args[0], "-h") {
+						return cmd.Help()
 					}
-					return c.Get(args[0])
-				}
-
-				// Collect any modules defined in config.toml
-				_, err := c.initConfig()
-				return err
-
+					return c.Get(args...)
+				})
 			},
 		},
 		&cobra.Command{
@@ -131,6 +145,7 @@ func (c *modCmd) newModsClient(cfg config.Provider) (*modules.Client, error) {
 	var (
 		workingDir   string
 		themesDir    string
+		modProxy     string
 		themes       []string
 		ignoreVendor bool
 	)
@@ -149,7 +164,16 @@ func (c *modCmd) newModsClient(cfg config.Provider) (*modules.Client, error) {
 		themesDir = cfg.GetString("themesDir")
 		themes = cfg.GetStringSlice("theme")
 		ignoreVendor = cfg.GetBool("ignoreVendor")
+		modProxy = cfg.GetString("modProxy")
 	}
 
-	return modules.NewClient(hugofs.Os, ignoreVendor, workingDir, themesDir, themes), nil
+	return modules.NewClient(modules.ClientConfig{
+		Fs:           hugofs.Os,
+		WorkingDir:   workingDir,
+		ThemesDir:    themesDir,
+		Imports:      themes,
+		IgnoreVendor: ignoreVendor,
+		ModProxy:      modProxy,
+	}), nil
+
 }

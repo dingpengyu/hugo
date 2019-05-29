@@ -68,17 +68,33 @@ const (
 	goSumFilename = "go.sum"
 )
 
+type ClientConfig struct {
+	Fs           afero.Fs
+	IgnoreVendor bool
+	WorkingDir   string
+	ThemesDir    string
+	ModProxy      string
+	Imports      []string
+}
+
+// TODO(bep) mod document modProxy config + HUGO_MODPROXY
+func (c ClientConfig) getGoProxy() string {
+	if c.ModProxy != "" {
+		return c.ModProxy
+	}
+	// Default to direct, which means "git clone" and similar. We
+	// will investigate proxy settings in more depth later.
+	// See https://github.com/golang/go/issues/26334
+	return "direct"
+}
+
 // NewClient creates a new Client that can be used to manage the Hugo Components
 // in a given workingDir.
 // The Client will resolve the dependencies recursively, but needs the top
 // level imports to start out.
-func NewClient(
-	fs afero.Fs,
-	ignoreVendor bool,
-	workingDir, themesDir string,
-	imports []string) *Client {
-
-	n := filepath.Join(workingDir, goModFilename)
+func NewClient(cfg ClientConfig) *Client {
+	fs := cfg.Fs
+	n := filepath.Join(cfg.WorkingDir, goModFilename)
 	goModEnabled, _ := afero.Exists(fs, n)
 	var goModFilename string
 	if goModEnabled {
@@ -86,14 +102,14 @@ func NewClient(
 	}
 
 	env := os.Environ()
-	setEnvVars(&env, "PWD", workingDir, "GOPROXY", getGoProxy())
+	setEnvVars(&env, "PWD", cfg.WorkingDir, "GOPROXY", getGoProxy())
 
 	return &Client{
 		fs:                fs,
-		ignoreVendor:      ignoreVendor,
-		workingDir:        workingDir,
-		themesDir:         themesDir,
-		imports:           imports,
+		ignoreVendor:      cfg.IgnoreVendor,
+		workingDir:        cfg.WorkingDir,
+		themesDir:         cfg.ThemesDir,
+		imports:           cfg.Imports,
 		environ:           env,
 		GoModulesFilename: goModFilename}
 }
@@ -219,7 +235,7 @@ func (m *Client) IsProbablyModule(path string) bool {
 // Unlike Go, we support it for any level.
 // We, by defaults, use the /_vendor folder first, if found. To disable,
 // run with
-//    hugo --no-vendor TODO(bep) also on hugo mod
+//    hugo --ignoreVendor
 //
 // Given a module tree, Hugo will pick the first module for a given path,
 // meaning that if the top-level module is vendored, that will be the full
@@ -247,8 +263,10 @@ func (c *Client) Vendor() error {
 	}
 
 	for _, t := range tc.Modules {
-		if !t.IsGoMod() {
-			// TODO(bep) mod consider /themes
+		// We respect the --ignoreVendor flag even for the vendor command.
+		if !t.IsGoMod() && !t.Vendor() {
+			// We currently do not vendor components living in the
+			// theme directory, see https://github.com/gohugoio/hugo/issues/5993
 			continue
 		}
 
@@ -536,7 +554,7 @@ func getGoProxy() string {
 		return hp
 	}
 
-	// Defaeult to direct, which means "git clone" and similar. We
+	// Default to direct, which means "git clone" and similar. We
 	// will investigate proxy settings in more depth later.
 	// See https://github.com/golang/go/issues/26334
 	return "direct"
